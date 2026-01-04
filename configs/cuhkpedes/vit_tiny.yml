@@ -1,0 +1,46 @@
+MODEL:
+  NAME: 'IRRA'
+  FEATURE_DIM: 512       # CLIP ViT-B/16 输出通常是 512
+  STRIDE_SIZE: [16, 16]
+  TEXT_LENGTH: 77
+  VOCAB_SIZE: 49408
+  MASK_RATIO: 0.5
+  DEVICE_ID: ('0')
+
+INPUT:
+  SIZE_TRAIN: [384, 128] # IRRA 默认图像尺寸较大，或者保持 256x128
+  SIZE_TEST: [384, 128]
+  PROB: 0.5              # Random Erasing
+
+DATASETS:
+  NAMES: ('CUHK-PEDES')
+  ROOT_DIR: './data'
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet' # 实际上这里会被 loader.py 里的逻辑覆盖为 T2I Sampler
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 8
+
+SOLVER:
+  OPTIMIZER_NAME: 'AdamW'  # CLIP 微调标配
+  BASE_LR: 0.00001         # 1e-5，通常比较小
+  WEIGHT_DECAY: 0.01
+  BIAS_LR_FACTOR: 1
+  MAX_EPOCHS: 60
+  EVAL_PERIOD: 1           # T2I 训练快，通常每 Epoch 都测
+  LOG_PERIOD: 100
+  WARMUP_EPOCHS: 5
+  LR_SCHEDULER: 'cosine'   # IRRA 使用 Cosine
+
+LOSS:
+  NAME: 'sdm+mlm+id'
+  SDM_LOSS_WEIGHT: 1.0
+  MLM_LOSS_WEIGHT: 1.0
+  ID_LOSS_WEIGHT: 1.0
+
+TEST:
+  BATCH_SIZE: 128
+  FEAT_NORM: 'yes'
+
+# [关键] 指定任务类型
+TASK_TYPE: 't2i'
