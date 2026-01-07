@@ -267,3 +267,77 @@ def build_model(cfg, num_classes=11003):
     # convert_weights(model.base_model)
     return model
 
+class IRRAHeadAdapter(nn.Module):
+    """
+    [新增] T2I 任务头适配器
+    作用：封装 IRRA 的 Text Encoder 和 Loss 计算逻辑，接收共享 Backbone 的视觉特征。
+    """
+    def __init__(self, irra_model):
+        super().__init__()
+        # 持有 IRRA 模型 (除了 vis_model 已经被移除)
+        self.model = irra_model
+        
+    def forward(self, image_feats, batch):
+        """
+        Args:
+            image_feats: [B, N, C] 共享 ViT Backbone 输出的完整序列特征
+            batch: 包含 caption_ids, pids 等的字典
+        """
+        ret = dict()
+        
+        # 1. 提取特征
+        # image_feats 是序列特征 [B, N, C]
+        # IRRA 需要 pooled feature (CLS) 用于匹配，sequence feature 用于 MLM
+        i_feats = image_feats[:, 0, :].float() # CLS token
+        
+        caption_ids = batch['caption_ids']
+        text_feats = self.model.base_model(caption_ids) # Text Encoder
+        t_feats = text_feats[torch.arange(text_feats.shape[0]), caption_ids.argmax(dim=-1)].float()
+
+        # 2. 计算 Loss (复用 IRRA 原有逻辑)
+        logit_scale = self.model.logit_scale
+        ret.update({'temperature': 1 / logit_scale})
+        
+        if 'itc' in self.model.current_task:
+            ret.update({'itc_loss': objectives.compute_itc(i_feats, t_feats, logit_scale)})
+        
+        if 'sdm' in self.model.current_task:
+            ret.update({'sdm_loss': objectives.compute_sdm(i_feats, t_feats, batch['pids'], logit_scale)})
+
+        if 'cmpm' in self.model.current_task:
+            ret.update({'cmpm_loss': objectives.compute_cmpm(i_feats, t_feats, batch['pids'])})
+        
+        if 'id' in self.model.current_task:
+            # 使用适配后的 Head (如果是 add_task 添加的 Linear) 或者 IRRA 自带的 classifier
+            # 这里我们假设 IRRA 自带 classifier 参数
+            image_logits = self.model.classifier(i_feats).float()
+            text_logits = self.model.classifier(t_feats).float()
+            ret.update({'id_loss': objectives.compute_id(image_logits, text_logits, batch['pids']) * self.model.args.id_loss_weight})
+            
+            image_pred = torch.argmax(image_logits, dim=1)
+            text_pred = torch.argmax(text_logits, dim=1)
+            ret.update({'img_acc': (image_pred == batch['pids']).float().mean()})
+            ret.update({'txt_acc': (text_pred == batch['pids']).float().mean()})
+
+        if 'mlm' in self.model.current_task:
+            mlm_ids = batch['mlm_ids']
+            mlm_feats = self.model.base_model(mlm_ids)
+            
+            # Cross Attention 需要完整的 image sequence features
+            x = self.model.cross_former(mlm_feats, image_feats, image_feats)
+            x = self.model.mlm_head(x)
+            
+            scores = x.float().reshape(-1, self.model.args.vocab_size)
+            mlm_labels = batch['mlm_labels'].reshape(-1)
+            ret.update({'mlm_loss': objectives.compute_mlm(scores, mlm_labels) * self.model.args.mlm_loss_weight})
+            
+            # 计算 MLM Acc
+            pred = scores.max(1)[1]
+            mlm_label_idx = torch.nonzero(mlm_labels)
+            if len(mlm_label_idx) > 0:
+                acc = (pred[mlm_label_idx] == mlm_labels[mlm_label_idx]).float().mean()
+                ret.update({'mlm_acc': acc})
+            else:
+                ret.update({'mlm_acc': 0.0})
+
+        return ret
