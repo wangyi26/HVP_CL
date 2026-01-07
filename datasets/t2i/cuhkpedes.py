@@ -2,7 +2,7 @@ import os.path as op
 from typing import List
 
 from utils.iotools import read_json
-from .bases_t2i import BaseDataset
+from .bases import BaseDataset
 
 
 class CUHKPEDES(BaseDataset):
@@ -43,8 +43,6 @@ class CUHKPEDES(BaseDataset):
         self.train, self.train_id_container = self._process_anno(self.train_annos, training=True)
         self.test, self.test_id_container = self._process_anno(self.test_annos)
         self.val, self.val_id_container = self._process_anno(self.val_annos)
-
-        self.num_train_pids = len(self.train_id_container)
 
         if verbose:
             self.logger.info("=> CUHK-PEDES Images and Captions are loaded")

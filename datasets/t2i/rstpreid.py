@@ -2,30 +2,29 @@ import os.path as op
 from typing import List
 
 from utils.iotools import read_json
-from .bases_t2i import BaseDataset
+from .bases import BaseDataset
 
 
-class ICFGPEDES(BaseDataset):
+class RSTPReid(BaseDataset):
     """
-    ICFG-PEDES
+    RSTPReid
 
     Reference:
-    Semantically Self-Aligned Network for Text-to-Image Part-aware Person Re-identification arXiv 2107
+    DSSL: Deep Surroundings-person Separation Learning for Text-based Person Retrieval MM 21
 
-    URL: http://arxiv.org/abs/2107.12666
+    URL: http://arxiv.org/abs/2109.05534
 
     Dataset statistics:
-    # identities: 4102
-    # images: 34674 (train) + 4855 (query) + 14993 (gallery)
-    # cameras: 15
+    # identities: 4101 
     """
-    dataset_dir = 'ICFG-PEDES'
+    dataset_dir = 'RSTPReid'
 
     def __init__(self, root='', verbose=True):
-        super(ICFGPEDES, self).__init__()
+        super(RSTPReid, self).__init__()
         self.dataset_dir = op.join(root, self.dataset_dir)
         self.img_dir = op.join(self.dataset_dir, 'imgs/')
-        self.anno_path = op.join(self.dataset_dir, 'ICFG-PEDES.json')
+
+        self.anno_path = op.join(self.dataset_dir, 'data_captions.json')
         self._check_before_run()
 
         self.train_annos, self.test_annos, self.val_annos = self._split_anno(self.anno_path)
@@ -34,10 +33,8 @@ class ICFGPEDES(BaseDataset):
         self.test, self.test_id_container = self._process_anno(self.test_annos)
         self.val, self.val_id_container = self._process_anno(self.val_annos)
 
-        self.num_train_pids = len(self.train_id_container)
-
         if verbose:
-            self.logger.info("=> ICFG-PEDES Images and Captions are loaded")
+            self.logger.info("=> RSTPReid Images and Captions are loaded")
             self.show_dataset_info()
 
 
@@ -62,7 +59,7 @@ class ICFGPEDES(BaseDataset):
             for anno in annos:
                 pid = int(anno['id'])
                 pid_container.add(pid)
-                img_path = op.join(self.img_dir, anno['file_path'])
+                img_path = op.join(self.img_dir, anno['img_path'])
                 captions = anno['captions'] # caption list
                 for caption in captions:
                     dataset.append((pid, image_id, img_path, caption))
@@ -80,7 +77,7 @@ class ICFGPEDES(BaseDataset):
             for anno in annos:
                 pid = int(anno['id'])
                 pid_container.add(pid)
-                img_path = op.join(self.img_dir, anno['file_path'])
+                img_path = op.join(self.img_dir, anno['img_path'])
                 img_paths.append(img_path)
                 image_pids.append(pid)
                 caption_list = anno['captions'] # caption list

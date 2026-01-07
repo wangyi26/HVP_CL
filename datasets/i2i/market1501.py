@@ -9,7 +9,7 @@ import re
 
 import os.path as osp
 
-from .bases_i2i import BaseImageDataset
+from .bases import BaseImageDataset
 from collections import defaultdict
 import pickle
 class Market1501(BaseImageDataset):

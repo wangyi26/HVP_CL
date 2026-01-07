@@ -4,7 +4,7 @@ import re
 
 import os.path as osp
 
-from .bases_i2i import BaseImageDataset
+from .bases import BaseImageDataset
 
 
 class MSMT17(BaseImageDataset):
