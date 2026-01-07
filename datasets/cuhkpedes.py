@@ -44,6 +44,8 @@ class CUHKPEDES(BaseDataset):
         self.test, self.test_id_container = self._process_anno(self.test_annos)
         self.val, self.val_id_container = self._process_anno(self.val_annos)
 
+        self.num_train_pids = len(self.train_id_container)
+
         if verbose:
             self.logger.info("=> CUHK-PEDES Images and Captions are loaded")
             self.show_dataset_info()

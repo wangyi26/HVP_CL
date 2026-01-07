@@ -13,7 +13,7 @@ from yacs.config import CfgNode as CN
 _C = CN()
 
 # =============================================================================
-# [新增] 任务类型标识 (HVP_CL 专用)
+# 任务类型标识 (HVP_CL 专用)
 # =============================================================================
 _C.TASK_TYPE = 'i2i'  # 'i2i' or 't2i'
 
@@ -27,6 +27,7 @@ _C.MODEL.DEVICE = "cuda"
 _C.MODEL.DEVICE_ID = '0'
 # Name of backbone
 _C.MODEL.NAME = 'resnet50'
+_C.MODEL.BACKBONE_TYPE = 'vit_tiny'
 # Last stride of backbone
 _C.MODEL.LAST_STRIDE = 1
 # Path to pretrained model of backbone
@@ -65,7 +66,7 @@ _C.MODEL.DROP_PATH = 0.1
 _C.MODEL.DROP_OUT = 0.0
 _C.MODEL.ATT_DROP_RATE = 0.0
 _C.MODEL.TRANSFORMER_TYPE = 'None'
-_C.MODEL.STRIDE_SIZE = [16, 16]
+_C.MODEL.STRIDE_SIZE = 16
 _C.MODEL.GEM_POOLING = False
 _C.MODEL.STEM_CONV = False
 

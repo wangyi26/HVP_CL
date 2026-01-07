@@ -240,17 +240,31 @@ if __name__ == '__main__':
     # 定义任务流
     TASKS = [
         # Task 1: Market1501 (I2I)
-        {
-            'name': 'Market1501',
-            'type': 'i2i',
-            'config': 'configs/market1501/vit_tiny.yml',
-            'load_pretrained': False
-        },
+        # {
+        #     'name': 'Market1501',
+        #     'type': 'i2i',
+        #     'config': 'configs/market1501/vit_tiny.yml',
+        #     'load_pretrained': False
+        # },
         # Task 2: MSMT17 I2I)
-        {
-            'name': 'MSMT17',
-            'type': 'i2i',
-            'config': 'configs/msmt17/vit_tiny.yml',
+        # {
+        #     'name': 'MSMT17',
+        #     'type': 'i2i',
+        #     'config': 'configs/msmt17/vit_tiny.yml',
+        #     'load_pretrained': False
+        # },
+        # Task 3:cuhkpedes T2I
+        # {
+        #     'name': 'CUHK-PEDES',
+        #     'type': 't2i',
+        #     'config': 'configs/cuhkpedes/vit_tiny.yml',
+        #     'load_pretrained': False
+        # },
+        # Task 4: icfgpedes T2I
+        {   
+            'name': 'ICFG-PEDES',
+            'type': 't2i',
+            'config': 'configs/icfgpedes/vit_tiny.yml',
             'load_pretrained': False
         }
     ]

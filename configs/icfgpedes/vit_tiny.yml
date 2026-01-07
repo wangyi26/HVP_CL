@@ -14,11 +14,11 @@ INPUT:
   PROB: 0.5              # Random Erasing
 
 DATASETS:
-  NAMES: ('CUHK-PEDES')
+  NAMES: ('ICFG-PEDES')
   ROOT_DIR: './data'
 
 DATALOADER:
-  SAMPLER: 'random'  # T2I 训练时使用 Random Sampler实际上这里会被 loader.py 里的逻辑覆盖为 T2I Sampler
+  SAMPLER: 'random' # 实际上这里会被 loader.py 里的逻辑覆盖为 T2I Sampler
   NUM_INSTANCE: 4
   NUM_WORKERS: 8
 
@@ -44,5 +44,5 @@ TEST:
   BATCH_SIZE: 128
   FEAT_NORM: 'yes'
 
-# [关键] 指定任务类型
+#  指定任务类型
 TASK_TYPE: 't2i'

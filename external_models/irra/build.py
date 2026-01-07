@@ -248,6 +248,7 @@ def build_model(cfg, num_classes=11003):
         pass
     args = Args()
     args.pretrain_choice = cfg.MODEL.NAME # 或者 cfg.MODEL.NAME
+    args.backbone_type = cfg.MODEL.BACKBONE_TYPE
     args.img_size = cfg.INPUT.SIZE_TRAIN
     args.stride_size = cfg.MODEL.STRIDE_SIZE
     args.temperature = 0.02

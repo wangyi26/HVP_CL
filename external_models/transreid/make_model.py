@@ -444,8 +444,6 @@ __factory_T_type = {
     'kd_vit_tiny_patch16_224_TransReID':kd_vit_tiny_patch16_224_TransReID,
     'kd_vit_small_patch16_224_TransReID':kd_vit_small_patch16_224_TransReID,
     'vit_tiny':vit_tiny,
-    #'cspnext_5m':cspnext_5m,
-    #'edgenext_small':edgenext_small,
     'starnet_s3':starnet_s3,
     'kd_starnet_s3':kd_starnet_s3,
     'tinyvit_5m':tinyvit_5m,

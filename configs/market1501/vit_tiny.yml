@@ -12,8 +12,6 @@ MODEL:
 INPUT:
   SIZE_TRAIN: [256, 128]
   SIZE_TEST: [256, 128]
-  #SIZE_TRAIN: [32, 16]
-  #SIZE_TEST: [32, 16]
   PROB: 0.5 # random horizontal flip
   RE_PROB: 0.5 # random erasing
   PADDING: 10
