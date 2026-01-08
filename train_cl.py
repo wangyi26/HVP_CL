@@ -11,7 +11,7 @@ import time
 
 # === 2. 引入配置与基础工具 ===
 from config import cfg
-from utils.logger import setup_logger
+from utils.i2i.logger import setup_logger
 
 
 # === 3. 引入核心模块 (CL Core) ===
@@ -22,16 +22,17 @@ from cl_core.processor import do_train_cl
 from cl_core.solver.build import make_cl_optimizer 
 
 # === 4. 引入数据与模型工厂 ===
-from datasets.factory import get_dataset
-from datasets.loader import build_dataloader
+from datasets import get_dataset, make_dataloader
 
 # === 5. 引入外部模型构建器 ===
 # I2I (TransReID)
-from external_models.transreid.make_model import make_model as make_i2i_model
-from external_models.transreid.loss.make_loss import make_loss as make_i2i_loss
-from external_models.transreid.solver import create_scheduler as create_scheduler_i2i
+from models import build_i2i_model, build_t2i_model
+from utils.i2i.loss.make_loss import make_loss as make_i2i_loss
+from solver.i2i import create_scheduler as create_scheduler_i2i
+from utils.t2i_adapter import T2IArgsAdapter
+# from external_models.transreid.solver import create_scheduler as create_scheduler_i2i
 # T2I (IRRA)
-from external_models.irra.build import build_model as make_t2i_model
+# from external_models.irra.build import build_model as make_t2i_model
 
 def set_seed(seed):
     torch.manual_seed(seed)

@@ -6,7 +6,10 @@ import torch.nn as nn
 from collections import OrderedDict
 from .vit import vit_tiny, vit_base, kd_vit_tiny, vit_small, sapiens_vit
 from .tinyvit import tinyvit_5m, kd_tinyvit_5m, csm_kd_tinyvit_5m
+from .edgenext import edgenext_small
 from .starnet import starnet_s3, kd_starnet_s3
+from .cspnext import cspnext_5m
+from .swin import swin_tiny_patch4_window7_224, swin_small_patch4_window7_224
 
 backbone_factory = {
     'vit_tiny': vit_tiny,
@@ -243,101 +246,78 @@ def build_model_v1(args, num_classes=11003):
     convert_weights(model)
     return model
 
-def build_model(cfg, num_classes=11003):
-    class Args:
-        pass
-    args = Args()
-    args.pretrain_choice = cfg.MODEL.NAME # 或者 cfg.MODEL.NAME
-    args.backbone_type = cfg.MODEL.BACKBONE_TYPE
-    args.img_size = cfg.INPUT.SIZE_TRAIN
-    args.stride_size = cfg.MODEL.STRIDE_SIZE
-    args.temperature = 0.02
-    args.loss_names = cfg.LOSS.NAME # 'sdm+id+mlm'
-    
-    # 映射 Loss 权重
-    args.id_loss_weight = cfg.LOSS.ID_LOSS_WEIGHT
-    args.mlm_loss_weight = cfg.LOSS.MLM_LOSS_WEIGHT
-    
-    # Transformer 参数
-    args.vocab_size = cfg.MODEL.VOCAB_SIZE
-    args.cmt_depth = 4 # 默认值，或者添加到 cfg
-
+def build_model(args, num_classes=11003):
     model = IRRAModel(args, num_classes)
     # covert model to fp16
     # convert_weights(model.base_model)
     return model
 
+
 class IRRAHeadAdapter(nn.Module):
     """
     [新增] T2I 任务头适配器
-    作用：封装 IRRA 的 Text Encoder 和 Loss 计算逻辑，接收共享 Backbone 的视觉特征。
+    位置：models/t2i/build.py
+    作用：封装 IRRA 的 Text Encoder 和 Loss 计算逻辑
     """
     def __init__(self, irra_model):
         super().__init__()
-        # 持有 IRRA 模型 (除了 vis_model 已经被移除)
         self.model = irra_model
         
     def forward(self, image_feats, batch):
         """
         Args:
             image_feats: [B, N, C] 共享 ViT Backbone 输出的完整序列特征
-            batch: 包含 caption_ids, pids 等的字典
+            batch: 包含 caption_ids, pids 等的列表或字典
         """
         ret = dict()
         
         # 1. 提取特征
-        # image_feats 是序列特征 [B, N, C]
-        # IRRA 需要 pooled feature (CLS) 用于匹配，sequence feature 用于 MLM
-        i_feats = image_feats[:, 0, :].float() # CLS token
+        # image_feats 0号位置是 CLS
+        i_feats = image_feats[:, 0, :].float() 
         
-        caption_ids = batch['caption_ids']
-        text_feats = self.model.base_model(caption_ids) # Text Encoder
+        # 根据 make_dataloader 的 collate_fn 返回值解析 batch
+        # T2I batch结构: (imgs, caption_ids, pids, mlm_ids, mlm_labels)
+        caption_ids = batch[1]
+        pids = batch[2]
+        
+        # 调用 IRRA 内部的 Text Encoder (base_model 通常是 BERT/CLIP-Text)
+        text_feats = self.model.base_model(caption_ids)
         t_feats = text_feats[torch.arange(text_feats.shape[0]), caption_ids.argmax(dim=-1)].float()
 
-        # 2. 计算 Loss (复用 IRRA 原有逻辑)
+        # 2. 计算 Loss
         logit_scale = self.model.logit_scale
         ret.update({'temperature': 1 / logit_scale})
         
-        if 'itc' in self.model.current_task:
-            ret.update({'itc_loss': objectives.compute_itc(i_feats, t_feats, logit_scale)})
+        # 获取配置 (self.model.args 即为当初传入的 args)
+        args = self.model.args
         
-        if 'sdm' in self.model.current_task:
-            ret.update({'sdm_loss': objectives.compute_sdm(i_feats, t_feats, batch['pids'], logit_scale)})
-
-        if 'cmpm' in self.model.current_task:
-            ret.update({'cmpm_loss': objectives.compute_cmpm(i_feats, t_feats, batch['pids'])})
+        # SDM Loss
+        if 'sdm' in args.loss_names:
+            ret.update({'sdm_loss': objectives.compute_sdm(i_feats, t_feats, pids, logit_scale)})
         
-        if 'id' in self.model.current_task:
-            # 使用适配后的 Head (如果是 add_task 添加的 Linear) 或者 IRRA 自带的 classifier
-            # 这里我们假设 IRRA 自带 classifier 参数
+        # ID Loss
+        if 'id' in args.loss_names:
             image_logits = self.model.classifier(i_feats).float()
             text_logits = self.model.classifier(t_feats).float()
-            ret.update({'id_loss': objectives.compute_id(image_logits, text_logits, batch['pids']) * self.model.args.id_loss_weight})
+            ret.update({'id_loss': objectives.compute_id(image_logits, text_logits, pids) * args.id_loss_weight})
             
             image_pred = torch.argmax(image_logits, dim=1)
             text_pred = torch.argmax(text_logits, dim=1)
-            ret.update({'img_acc': (image_pred == batch['pids']).float().mean()})
-            ret.update({'txt_acc': (text_pred == batch['pids']).float().mean()})
+            ret.update({'img_acc': (image_pred == pids).float().mean()})
+            ret.update({'txt_acc': (text_pred == pids).float().mean()})
 
-        if 'mlm' in self.model.current_task:
-            mlm_ids = batch['mlm_ids']
+        # MLM Loss (需要序列特征)
+        if 'mlm' in args.loss_names:
+            mlm_ids = batch[3]
+            mlm_labels = batch[4]
             mlm_feats = self.model.base_model(mlm_ids)
             
-            # Cross Attention 需要完整的 image sequence features
             x = self.model.cross_former(mlm_feats, image_feats, image_feats)
             x = self.model.mlm_head(x)
             
-            scores = x.float().reshape(-1, self.model.args.vocab_size)
-            mlm_labels = batch['mlm_labels'].reshape(-1)
-            ret.update({'mlm_loss': objectives.compute_mlm(scores, mlm_labels) * self.model.args.mlm_loss_weight})
-            
-            # 计算 MLM Acc
-            pred = scores.max(1)[1]
-            mlm_label_idx = torch.nonzero(mlm_labels)
-            if len(mlm_label_idx) > 0:
-                acc = (pred[mlm_label_idx] == mlm_labels[mlm_label_idx]).float().mean()
-                ret.update({'mlm_acc': acc})
-            else:
-                ret.update({'mlm_acc': 0.0})
+            scores = x.float().reshape(-1, args.vocab_size)
+            mlm_labels = mlm_labels.reshape(-1)
+            ret.update({'mlm_loss': objectives.compute_mlm(scores, mlm_labels) * args.mlm_loss_weight})
 
         return ret
+

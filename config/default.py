@@ -11,12 +11,6 @@ from yacs.config import CfgNode as CN
 # -----------------------------------------------------------------------------
 
 _C = CN()
-
-# =============================================================================
-# 任务类型标识 (HVP_CL 专用)
-# =============================================================================
-_C.TASK_TYPE = 'i2i'  # 'i2i' or 't2i'
-
 # -----------------------------------------------------------------------------
 # MODEL
 # -----------------------------------------------------------------------------
@@ -27,7 +21,6 @@ _C.MODEL.DEVICE = "cuda"
 _C.MODEL.DEVICE_ID = '0'
 # Name of backbone
 _C.MODEL.NAME = 'resnet50'
-_C.MODEL.BACKBONE_TYPE = 'vit_tiny'
 # Last stride of backbone
 _C.MODEL.LAST_STRIDE = 1
 # Path to pretrained model of backbone
@@ -66,7 +59,7 @@ _C.MODEL.DROP_PATH = 0.1
 _C.MODEL.DROP_OUT = 0.0
 _C.MODEL.ATT_DROP_RATE = 0.0
 _C.MODEL.TRANSFORMER_TYPE = 'None'
-_C.MODEL.STRIDE_SIZE = 16
+_C.MODEL.STRIDE_SIZE = [16, 16]
 _C.MODEL.GEM_POOLING = False
 _C.MODEL.STEM_CONV = False
 
@@ -84,16 +77,6 @@ _C.MODEL.SIE_VIEW = False
 
 # Semantic Weight
 _C.MODEL.SEMANTIC_WEIGHT = 1.0
-
-# =============================================================================
-# [新增] T2I (IRRA/CLIP) 专用模型参数
-# =============================================================================
-_C.MODEL.TEXT_LENGTH = 77       # CLIP 文本长度
-_C.MODEL.VOCAB_SIZE = 49408     # CLIP 词表
-_C.MODEL.EMBED_DIM = 512        # CLIP 输出维度
-_C.MODEL.MASK_RATIO = 0.5       # MLM Mask 比例
-_C.MODEL.CMPM = True
-_C.MODEL.CMPC = True
 
 # -----------------------------------------------------------------------------
 # INPUT
@@ -174,7 +157,7 @@ _C.SOLVER.GAMMA = 0.1
 _C.SOLVER.STEPS = (40, 70)
 # warm up factor
 _C.SOLVER.WARMUP_FACTOR = 0.01
-#  warm up epochs
+#  warm up epochs
 _C.SOLVER.WARMUP_EPOCHS = 5
 # method of warm up, option: 'constant','linear'
 _C.SOLVER.WARMUP_METHOD = "cosine"
@@ -194,11 +177,6 @@ _C.SOLVER.EVAL_PERIOD = 10
 _C.SOLVER.IMS_PER_BATCH = 64
 _C.SOLVER.TRP_L2 = False
 
-# [新增] 为了兼容 T2I 代码习惯，增加 BATCH_SIZE 别名 (指向 IMS_PER_BATCH)
-_C.SOLVER.BATCH_SIZE = 64 
-# [新增] 显式调度器类型 ('step' or 'cosine')
-_C.SOLVER.LR_SCHEDULER = 'step'
-
 # ---------------------------------------------------------------------------- #
 # TEST
 # ---------------------------------------------------------------------------- #
@@ -206,7 +184,6 @@ _C.SOLVER.LR_SCHEDULER = 'step'
 _C.TEST = CN()
 # Number of images per batch during test
 _C.TEST.IMS_PER_BATCH = 128
-_C.TEST.BATCH_SIZE = 128 # [新增] 别名
 # If test with re-ranking, options: 'True','False'
 _C.TEST.RE_RANKING = False
 # Path to trained model
@@ -220,28 +197,75 @@ _C.TEST.FEAT_NORM = 'yes'
 _C.TEST.DIST_MAT = "dist_mat.npy"
 # Whether calculate the eval score option: 'True', 'False'
 _C.TEST.EVAL = False
-# Whether metric is cosine or euclidean
-_C.TEST.METRIC = 'cosine'
-
 # ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #
 # Path to checkpoint and saved log of trained model
 _C.OUTPUT_DIR = ""
 
-# =============================================================================
-# [新增] CL (持续学习) 配置
-# =============================================================================
-_C.CL = CN()
-_C.CL.METHOD = 'ewc' # 'finetune', 'ewc'
-_C.CL.EWC_LAMBDA = 5000.0
 
-# =============================================================================
-# [新增] LOSS 配置 (用于统一管理 T2I 的 Loss)
-# =============================================================================
-_C.LOSS = CN()
-_C.LOSS.NAME = 'sdm+mlm+id'
-_C.LOSS.SDM_LOSS_WEIGHT = 1.0
-_C.LOSS.MLM_LOSS_WEIGHT = 1.0
-# ID/Triplet 权重在 MODEL 里有，这里仅作兼容或冗余
-_C.LOSS.ID_LOSS_WEIGHT = 1.0
+# 新增general setting参数：
+_C.LOCAL_RANK = 0
+
+# T2I 特定参数：
+_C.T2I = CN()
+_C.T2I.NAME = 'baseline'
+_C.T2I.RESUME = False
+_C.T2I.CKPT_FILE = ''
+_C.T2I.PRETRAIN_CHOICE = 'ViT-B/16'
+_C.T2I.TEMPERATURE = 0.02
+_C.T2I.IMG_AUG = False
+_C.T2I.BACKBONE_TYPE = 'vit_tiny'
+
+_C.T2I.CMT_DEPTH = 4                   
+_C.T2I.MASKED_TOKEN_RATE = 0.8         
+_C.T2I.MASKED_TOKEN_UNCHANGED_RATE = 0.1 
+_C.T2I.LR_FACTOR = 5.0                 
+_C.T2I.MLM = False
+
+_C.T2I.LOSS = CN()
+_C.T2I.LOSS.NAMES = 'sdm+id+mlm'       # which loss to use
+_C.T2I.LOSS.MLM_WEIGHT = 1.0           # mlm loss weight
+_C.T2I.LOSS.ID_WEIGHT = 1.0            # id loss weight
+
+_C.T2I.IMG_SIZE = [384, 128]           # [H, W] default 384, 128
+_C.T2I.STRIDE_SIZE = 16
+
+_C.T2I.TEXT_LENGTH = 77
+_C.T2I.VOCAB_SIZE = 49408
+
+_C.T2I.SOLVER = CN()
+_C.T2I.SOLVER.OPTIMIZER = "Adam"       # [SGD, Adam, Adamw]
+_C.T2I.SOLVER.LR = 1e-5
+_C.T2I.SOLVER.BIAS_LR_FACTOR = 2.0
+_C.T2I.SOLVER.MOMENTUM = 0.9
+_C.T2I.SOLVER.WEIGHT_DECAY = 4e-5
+_C.T2I.SOLVER.WEIGHT_DECAY_BIAS = 0.0
+_C.T2I.SOLVER.ALPHA = 0.9
+_C.T2I.SOLVER.BETA = 0.999
+
+_C.T2I.SCHEDULER = CN()
+_C.T2I.SCHEDULER.NUM_EPOCH = 60
+_C.T2I.SCHEDULER.MILESTONES = [20, 50]
+_C.T2I.SCHEDULER.GAMMA = 0.1
+_C.T2I.SCHEDULER.WARMUP_FACTOR = 0.1
+_C.T2I.SCHEDULER.WARMUP_EPOCHS = 5
+_C.T2I.SCHEDULER.WARMUP_METHOD = "linear"
+_C.T2I.SCHEDULER.LRSCHEDULER = "cosine"
+_C.T2I.SCHEDULER.TARGET_LR = 0.0
+_C.T2I.SCHEDULER.POWER = 0.9
+
+_C.T2I.DATASET_NAME = "CUHK-PEDES"
+_C.T2I.SAMPLER = "random"              # [identity, random]
+_C.T2I.NUM_INSTANCE = 4
+_C.T2I.ROOT_DIR = "./data"
+_C.T2I.BATCH_SIZE = 128
+_C.T2I.TEST_BATCH_SIZE = 512
+_C.T2I.NUM_WORKERS = 8
+_C.T2I.TRAINING = True
+
+
+
+
+
+# 持续学习方法的参数：

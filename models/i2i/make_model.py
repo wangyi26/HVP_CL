@@ -9,7 +9,7 @@ from .backbones.tinyvit import tinyvit_5m,tinyvit_21m,kd_tinyvit_5m
 #from .backbones.cspnext import cspnext_5m
 #from .backbones.edgenext import edgenext_small
 from .backbones.starnet import starnet_s3, kd_starnet_s3
-from .loss.metric_learning import Arcface, Cosface, AMSoftmax, CircleLoss
+from utils.i2i.loss.metric_learning import Arcface, Cosface, AMSoftmax, CircleLoss
 from .backbones.resnet_ibn_a import resnet50_ibn_a,resnet101_ibn_a
 
 def shuffle_unit(features, shift, group, begin=1):
@@ -444,6 +444,8 @@ __factory_T_type = {
     'kd_vit_tiny_patch16_224_TransReID':kd_vit_tiny_patch16_224_TransReID,
     'kd_vit_small_patch16_224_TransReID':kd_vit_small_patch16_224_TransReID,
     'vit_tiny':vit_tiny,
+    #'cspnext_5m':cspnext_5m,
+    #'edgenext_small':edgenext_small,
     'starnet_s3':starnet_s3,
     'kd_starnet_s3':kd_starnet_s3,
     'tinyvit_5m':tinyvit_5m,

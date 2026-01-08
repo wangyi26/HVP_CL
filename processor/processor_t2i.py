@@ -1,9 +1,9 @@
 import logging
 import time
 import torch
-from utils.meter import AverageMeter
-from utils.metrics import Evaluator
-from utils.comm import get_rank, synchronize
+from utils.t2i.meter import AverageMeter
+from utils.t2i.metrics import Evaluator
+from utils.t2i.comm import get_rank, synchronize
 from torch.utils.tensorboard import SummaryWriter
 from prettytable import PrettyTable
 
@@ -114,3 +114,5 @@ def do_inference(model, test_img_loader, test_txt_loader):
 
     evaluator = Evaluator(test_img_loader, test_txt_loader)
     top1 = evaluator.eval(model.eval())
+
+

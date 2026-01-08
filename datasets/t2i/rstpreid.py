@@ -1,7 +1,7 @@
 import os.path as op
 from typing import List
 
-from utils.iotools import read_json
+from utils.t2i.iotools import read_json
 from .bases import BaseDataset
 
 

@@ -1,48 +1,58 @@
-MODEL:
-  NAME: 'ViT-B/16'
+OUTPUT_DIR: './logs'
+T2I:
+  NAME: 'baseline'
   BACKBONE_TYPE: 'vit_tiny'
-  FEAT_DIM: 512       # CLIP ViT-B/16 输出通常是 512
+  PRETRAIN_CHOICE: 'ViT-B/16' # 如果你用的是 Tiny，可能需要改成对应的预训练权重，如 'ViT-B/16' 可能是默认值
+  
+  # Dataset specifics
+  DATASET_NAME: 'ICFG-PEDES'
+  ROOT_DIR: './data'
+  SAMPLER: 'random'
+  BATCH_SIZE: 128
+  TEST_BATCH_SIZE: 512
+  NUM_WORKERS: 8
+  
+  # Model specifics
+  IMG_SIZE: [384, 128]
   STRIDE_SIZE: 16
   TEXT_LENGTH: 77
   VOCAB_SIZE: 49408
-  MASK_RATIO: 0.5
-  DEVICE_ID: ('0')
+  CMT_DEPTH: 4
+  MASKED_TOKEN_RATE: 0.8
+  MASKED_TOKEN_UNCHANGED_RATE: 0.1
+  MLM: False  # 是否开启 Mask Language Modeling
+  
+  # Loss specifics
+  LOSS:
+    NAMES: 'sdm+id+mlm'
+    MLM_WEIGHT: 1.0
+    ID_WEIGHT: 1.0
 
-INPUT:
-  SIZE_TRAIN: [384, 128] # IRRA 默认图像尺寸较大，或者保持 256x128
-  SIZE_TEST: [384, 128]
-  PROB: 0.5              # Random Erasing
-
-DATASETS:
-  NAMES: ('ICFG-PEDES')
-  ROOT_DIR: './data'
-
-DATALOADER:
-  SAMPLER: 'random' # 实际上这里会被 loader.py 里的逻辑覆盖为 T2I Sampler
-  NUM_INSTANCE: 4
-  NUM_WORKERS: 8
-
-SOLVER:
-  OPTIMIZER_NAME: 'AdamW'  # CLIP 微调标配
-  BASE_LR: 0.0001         # 1e-5，通常比较小
-  WEIGHT_DECAY: 0.01
-  BIAS_LR_FACTOR: 1
-  MAX_EPOCHS: 1
-  EVAL_PERIOD: 1           # T2I 训练快，通常每 Epoch 都测
-  LOG_PERIOD: 100
-  WARMUP_EPOCHS: 5
-  LR_SCHEDULER: 'cosine'   # IRRA 使用 Cosine
-  BATCH_SIZE: 128
-
-LOSS:
-  NAME: 'sdm+mlm+id'
-  SDM_LOSS_WEIGHT: 1.0
-  MLM_LOSS_WEIGHT: 1.0
-  ID_LOSS_WEIGHT: 1.0
-
-TEST:
-  BATCH_SIZE: 128
-  FEAT_NORM: 'yes'
-
-#  指定任务类型
-TASK_TYPE: 't2i'
+  # Optimization specifics (T2I 专用优化器参数)
+  SOLVER:
+    OPTIMIZER: 'Adam'
+    LR: 1e-5
+    BIAS_LR_FACTOR: 2.0
+    MOMENTUM: 0.9
+    WEIGHT_DECAY: 4e-5
+    WEIGHT_DECAY_BIAS: 0.0
+    ALPHA: 0.9
+    BETA: 0.999
+    
+  # Scheduler specifics
+  SCHEDULER:
+    NUM_EPOCH: 60
+    MILESTONES: [20, 50]
+    GAMMA: 0.1
+    WARMUP_FACTOR: 0.1
+    WARMUP_EPOCHS: 5
+    WARMUP_METHOD: 'linear'
+    LRSCHEDULER: 'cosine'
+    TARGET_LR: 0.0
+    POWER: 0.9
+    
+  # Misc
+  TEMPERATURE: 0.02
+  IMG_AUG: False   # 训练时是否开启 T2I 特定的增强 (除了基础增强外)
+  RESUME: False
+  TRAINING: True

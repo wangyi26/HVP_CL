@@ -2,11 +2,11 @@ import logging
 import torch
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
-from datasets.sampler import RandomIdentitySampler
-from datasets.sampler_ddp import RandomIdentitySampler_DDP
+from datasets.t2i.sampler import RandomIdentitySampler
+# from datasets.sampler_ddp import RandomIdentitySampler_DDP
 from torch.utils.data.distributed import DistributedSampler
 
-from utils.comm import get_world_size
+from utils.t2i.comm import get_world_size
 
 from .bases import ImageDataset, TextDataset, ImageTextDataset, ImageTextMLMDataset
 
